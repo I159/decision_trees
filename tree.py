@@ -11,43 +11,77 @@ class Tree(object):
     Control nodes. Maintain learning process and making decisions process."""
 
     def __init__(self, learning_data, target):
-        # * Sort a training data relatively to a target feature to determine
-        # the most bound features: the smaller entropy at the data sorted
-        # relative to the target feature, the more bound the feature to the
-        # target.
+        """Sort a training data relatively to a target feature.
+
+        Sort a training data relatively to a target feature to determine
+        the most bound features: the smaller entropy at the data sorted
+        relative to the target feature, the more bound the feature to the
+        target."""
+
         self.learning_data = sorted(learning_data, key=lambda x: x[target])
+        self.keys = self.get_keys()
         self.target = target
         self.learn()
         self.cleanup()
 
-    def get_probs(self, key, from_, to):
+    def get_keys(self):
+        """Check for data consistency and return keys."""
+        keys = set(i.keys() for i in self.learning_data)
+        if len(keys) == 1:
+            return keys.pop()
+        raise ValueError('Inconsistence data: the items have different keys.')
+
+    def get_probability(self, key, from_, to):
         """Get probability for a different values of a key on a slice."""
         the_slice = self.learning_data[from_: to]
-        # This example is binary. With non binary data it
-        # could be much more complex.
         for i in (0, 1):
             by_key = filter(lambda x: x[key] == i, the_slice)
             yield len(by_key) / float(len(the_slice))
 
-    def cnt_entp(self, key, from_, to):
+    def count_entropy(self, key, from_, to):
         """Count entropy for a key on a slice."""
         probs = self.get_probability(key, from_, to)
         return sum(map(lambda p: -(p * math.log(p, 2)), probs))
 
-    def min_ave_entropy_idx(self, key, from_, to):
-        # * Conunt average entropy for all allowed slices
-        # * Return a minimum average entropy index and a prevailing
-        # values of the right and left side by the target key.
-        delimeters = xrange(from_ + 1, to - 1)
-        ave_entp = lambda i: (self.cnt_entp(key, from_, i), self.cnt_entp(key, i, to))
-        map(ave_entp, delimeters)
-        raise NotImplementedError
+    @staticmethod
+    def min_entp_key(x):
+        return x[0]
+
+    def average_entropy(self, key, from_, to):
+        def count(delimeter):
+            ave_entropy = sum(
+                    self.count_entropy(key, from_, delimeter),
+                    self.count_entropy(key, delimeter, to)) / 2.0
+            return ave_entropy, delimeter
+        return count
+
+    def min_entpy_idx(self, from_, to):
+        """Conunt average entropy for all allowed slices
+        Return a minimum average entropy index and a prevailing
+        values of the right and left side by the target key."""
+
+        def count(key):
+            delimeters = xrange(from_ + 1, to - 1)
+            get_average_entropy = self.average_entropy(key, from_, to)
+            entp_dlm = min(
+                    map(get_average_entropy, delimeters),
+                    key=self.min_entp_key)
+            return entp_dlm += key
+        return count
 
     def get_predicate(self, from_, to):
-        # 1* Iterate through a keys:
-        #     2* Iterate through a sequence to get minimum entropy item.
-        # 3* Git minimum entropy key and item index
-        # 4* Determine 1 0 direction and set an appropriate predicate function.
+        keys_idxs = map(self.min_entpy_idx(key, from_, to), self.keys)
+        index, key = min(keys_idxs, key=self.min_entp_key)
+        left = collections.Counter(
+                i[key] for i in self.learning_data[from_: index])
+        right = collections.Counter(
+                i[key] for i in self.learning_data[index: to])
+        left_val = max(left, key=lambda k: left[k])
+        right_val = max(right, key=lambda k: right[k])
+        # Remove the key for the keys list.
+        node = {'key': key,
+                'left': left_val,
+                'right': right_val}
         raise NotImplementedError
 
     def learn(self):
