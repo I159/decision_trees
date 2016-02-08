@@ -7,23 +7,27 @@ import tree
 
 
 class TestBuildTree(unittest.TestCase):
-    def gen_data(self, num_items):
-        keys = (string.ascii_lowercase[i] for i in xrange(2**4))
+    def gen_data(self, num_items, incons=False):
+        keys = [string.ascii_lowercase[i] for i in xrange(2**4)]
         while num_items:
-            item = {k: random.randrange(i) for i, k in enumerate(keys)}
+            item = {k: random.randint(0, 1) for k in keys}
             item['result'] = sum(item.values()) % 2
+            if incons:
+                del item['b']
+                incons = False
+            num_items -= 1
             yield item
 
     def gen_inconsistence_data(self, num_items):
         return list(self.gen_data(num_items))[0].pop('a')
 
-    @mock.patch.object(tree, 'Tree', autospec=True)
-    def test_init_tree(self, Tree):
-        learning_data = self.gen_data(1000)
-        tree_ = Tree(learning_data)
+    def test_init_tree(self):
+        learning_data = list(self.gen_data(1000))
+        tree_ = tree.Tree(learning_data, 'p')
 
     def test_inconsistence_data_init(self):
-        self.assertRaises(ValueError, self.gen_inconsistence_data, 1000)
+        learning_data = self.gen_data(1000, incons=True)
+        self.assertRaises(ValueError, tree.Tree, learning_data, 'p')
 
     def test_ninimum_enthropy(self):
         unittest.skip("Not implemented.")

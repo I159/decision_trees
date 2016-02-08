@@ -2,6 +2,8 @@
 
 All the features including a target feature is binary."""
 
+import collections
+import itertools
 import math
 
 
@@ -18,30 +20,43 @@ class Tree(object):
         relative to the target feature, the more bound the feature to the
         target."""
 
-        self.learning_data = sorted(learning_data, key=lambda x: x[target])
-        self.keys = self.get_keys()
         self.target = target
+        self.keys = self.get_verified_keys(learning_data)
+        self.learning_data = self.get_verified_data(learning_data)
+        self.root_node = None
         self.learn()
         self.cleanup()
 
-    def get_keys(self):
-        """Check for data consistency and return keys."""
-        keys = set(i.keys() for i in self.learning_data)
-        if len(keys) == 1:
-            return keys.pop()
-        raise ValueError('Inconsistence data: the items have different keys.')
+    def get_verified_data(self, data):
+        if len(set(itertools.chain(*(i.itervalues() for i in data)))) != 2:
+            raise ValueError(
+                    'Inconsistent data: data is not binary.')
+        return sorted(data, key=lambda x: x[self.target])
 
-    def get_probability(self, key, from_, to):
+    def get_verified_keys(self, learning_data):
+        """Check for data consistency and return keys."""
+        keys = set(tuple(i.keys()) for i in learning_data)
+        if len(keys) == 1:
+            return list(keys.pop())
+        raise ValueError('Inconsistent data: the items have different keys.')
+
+    def get_probability(self, key, from_=None, to=None):
         """Get probability for a different values of a key on a slice."""
-        the_slice = self.learning_data[from_: to]
+        if from_ or to:
+            the_slice = self.learning_data[from_:to]
+        else:
+            the_slice = self.learning_data
         for i in (0, 1):
             by_key = filter(lambda x: x[key] == i, the_slice)
             yield len(by_key) / float(len(the_slice))
 
     def count_entropy(self, key, from_, to):
         """Count entropy for a key on a slice."""
-        probs = self.get_probability(key, from_, to)
-        return sum(map(lambda p: -(p * math.log(p, 2)), probs))
+        probs = list(self.get_probability(key, from_, to))
+        try:
+            return sum(map(lambda p: -(p * math.log(p, 2)), probs))
+        except ValueError:
+            return None
 
     @staticmethod
     def min_entp_key(x):
@@ -49,10 +64,16 @@ class Tree(object):
 
     def average_entropy(self, key, from_, to):
         def count(delimeter):
-            ave_entropy = sum(
-                    self.count_entropy(key, from_, delimeter),
-                    self.count_entropy(key, delimeter, to)) / 2.0
-            return ave_entropy, delimeter
+            entropy = filter(None,
+                    (self.count_entropy(key, from_, delimeter),
+                     self.count_entropy(key, delimeter, to))
+                    )
+            if len(entropy) == 1:
+                return entropy[0], delimeter
+            elif not entropy:
+                return 0, delimeter
+            else:
+                return sum(entropy) / 2.0, delimeter
         return count
 
     def min_entpy_idx(self, from_, to):
@@ -61,51 +82,61 @@ class Tree(object):
         values of the right and left side by the target key."""
 
         def count(key):
-            delimeters = xrange(from_ + 1, to - 1)
-            get_average_entropy = self.average_entropy(key, from_, to)
-            entp_dlm = min(
-                    map(get_average_entropy, delimeters),
-                    key=self.min_entp_key)
-            return entp_dlm += key
+            ave_entropy = map(
+                    self.average_entropy(key, from_, to),
+                    xrange(from_, to))
+            entp_dlm = min(ave_entropy, key=self.min_entp_key)
+            return entp_dlm + (key, )
         return count
 
-    def get_predicate(self, from_, to):
-        keys_idxs = map(self.min_entpy_idx(key, from_, to), self.keys)
-        index, key = min(keys_idxs, key=self.min_entp_key)
+    def learn(self, from_=None, to=None):
+        from_ = from_ or 0
+        to = to or len(self.learning_data)
+
+        index, key = min(
+                map(
+                    self.min_entpy_idx(from_, to),
+                    self.keys
+                    ),
+                key=self.min_entp_key)[1:]
+
         left = collections.Counter(
                 i[key] for i in self.learning_data[from_: index])
         right = collections.Counter(
                 i[key] for i in self.learning_data[index: to])
         left_val = max(left, key=lambda k: left[k])
         right_val = max(right, key=lambda k: right[k])
-        # Remove the key for the keys list.
+
+        self.keys.remove(key)
+
         node = {'key': key,
-                'left': left_val,
-                'right': right_val}
-        raise NotImplementedError
+                'target': self.learning_data[index][self.target]}
 
-    def learn(self):
-        # 1* Count average entropy for each item.
-        # 2* Get minimum entropy item index
-        # 3* Divide a dataset with the obtained element.
-        # 4* Set an initial node with the minimum entropy element as predicate.
-        # node = {feature_name: name, 'left': l_next_node, 'right': r_next_node}
-        # leaf_node = the same but with predicted feature value
+        if from_ - index < 3:
+            return node
 
-        # Keep slices for every node during a loop. Store in a node if it is
-        # needed.
-        # 5->1->2* For both parts.
-        # 6->3* For both parts.
-        # 7* Set leafs for a parent node (Parallel computation).
-        # 8* Cleanup: remove a learning data and a slices.
-        raise NotImplementedError
+        if self.keys:
+            node['left'] = left_val
+            node['right'] = right_val
+            node['left_child'] = self.learn(from_, index)
+            node['right_child'] = self.learn(index, to)
 
-    def make_decision(self, unclassified):
-        # * Iteratively compare all the features of an unclassified item with
-        # a nodes. Use single rule: 1 - left, 0 - right.
-        # * Return predicted value for an unknown feature.
-        raise NotImplementedError
+        if not self.root_node:
+            self.root_node = node
+
+        return node
+
+    def make_decision(self, unclassified, node=None):
+        node = node or self.root_node
+        try:
+            if unclassified[node['key']] == node['left']:
+                return self.make_decision(unclassified, node['left_child'])
+            elif unclassified[node['key']] == node['right']:
+                return self.make_decision(unclassified, node['right'])
+            raise ValueError('Invalid predicate value.')
+        except KeyError:
+            return node[self.target]
 
     def cleanup(self):
-        # 8* Cleanup: remove a learning data and a slices.
-        raise NotImplementedError
+        delattr(self, 'keys')
+        delattr(self, 'learning_data')
