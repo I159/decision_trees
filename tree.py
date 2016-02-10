@@ -12,6 +12,8 @@ class Tree(object):
 
     Control nodes. Maintain learning process and making decisions process."""
 
+    parts = collections.namedtuple('DataParts', ('left', 'right'))
+
     def __init__(self, learning_data, target):
         """Sort a training data relatively to a target feature.
 
@@ -89,41 +91,42 @@ class Tree(object):
             return entp_dlm + (key, )
         return count
 
-    def learn(self, from_=None, to=None):
-        from_ = from_ or 0
-        to = to or len(self.learning_data)
-
-        index, key = min(
-                map(
-                    self.min_entpy_idx(from_, to),
-                    self.keys
-                    ),
-                key=self.min_entp_key)[1:]
-
+    def divide_sequence(self, from_, to, delimeter, key):
         left = collections.Counter(
-                i[key] for i in self.learning_data[from_: index])
+                i[key] for i in self.learning_data[from_: delimeter])
         right = collections.Counter(
-                i[key] for i in self.learning_data[index: to])
-        left_val = max(left, key=lambda k: left[k])
-        right_val = max(right, key=lambda k: right[k])
+                i[key] for i in self.learning_data[delimeter: to])
 
+        self.parts(
+                max(left, key=lambda k: left[k]),
+                max(right, key=lambda k: right[k]))
+
+    def min_key_index(self, from_, to):
+        keys_by_entp = map(self.min_entpy_idx(from_, to), self.keys)
+        index, key = min(keys_by_entp, key=self.min_entp_key)[1:]
         self.keys.remove(key)
+        return index, key
 
+    def make_node(self, from_, to, values, key, index):
         node = {'key': key,
                 'target': self.learning_data[index][self.target]}
-
         if from_ - index < 3:
             return node
-
-        if self.keys:
-            node['left'] = left_val
-            node['right'] = right_val
+        elif self.keys:
+            node['left'] = values.left
+            node['right'] = values.right
             node['left_child'] = self.learn(from_, index)
             node['right_child'] = self.learn(index, to)
 
+    def learn(self, from_=None, to=None):
+        from_ = from_ or 0
+        to = to or len(self.learning_data)
+        index, key = self.min_key_index(from_, to)
+        node = self.make_node(from_, to,
+                self.divide_sequence(from_, to, index, key), key, index)
+
         if not self.root_node:
             self.root_node = node
-
         return node
 
     def make_decision(self, unclassified, node=None):
