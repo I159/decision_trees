@@ -86,7 +86,7 @@ class Tree(object):
         def count(key):
             ave_entropy = map(
                     self.average_entropy(key, from_, to),
-                    xrange(from_, to))
+                    xrange(from_+1, to-1))
             entp_dlm = min(ave_entropy, key=self.min_entp_key)
             return entp_dlm + (key, )
         return count
@@ -97,9 +97,10 @@ class Tree(object):
         right = collections.Counter(
                 i[key] for i in self.learning_data[delimeter: to])
 
-        self.parts(
+        return self.parts(
                 max(left, key=lambda k: left[k]),
-                max(right, key=lambda k: right[k]))
+                max(right, key=lambda k: right[k])
+                )
 
     def min_key_index(self, from_, to):
         keys_by_entp = map(self.min_entpy_idx(from_, to), self.keys)
@@ -107,23 +108,24 @@ class Tree(object):
         self.keys.remove(key)
         return index, key
 
-    def make_node(self, from_, to, values, key, index):
-        node = {'key': key,
-                'target': self.learning_data[index][self.target]}
-        if from_ - index < 3:
-            return node
-        elif self.keys:
+    def learn(self, from_=None, to=None):
+        if not self.keys:
+            return None
+
+        from_ = from_ or 0
+        to = to or len(self.learning_data)
+        index, key = self.min_key_index(from_, to)
+
+        node = {
+                'key': key,
+                'target': self.learning_data[index][self.target]
+                }
+        if index - from_ > 4:
+            values = self.divide_sequence(from_, to, index, key)
             node['left'] = values.left
             node['right'] = values.right
             node['left_child'] = self.learn(from_, index)
             node['right_child'] = self.learn(index, to)
-
-    def learn(self, from_=None, to=None):
-        from_ = from_ or 0
-        to = to or len(self.learning_data)
-        index, key = self.min_key_index(from_, to)
-        node = self.make_node(from_, to,
-                self.divide_sequence(from_, to, index, key), key, index)
 
         if not self.root_node:
             self.root_node = node

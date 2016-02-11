@@ -24,6 +24,7 @@ class TestBuildTree(unittest.TestCase):
     def test_init_tree(self):
         learning_data = list(self.gen_data(1000))
         tree_ = tree.Tree(learning_data, 'p')
+        import pdb; pdb.set_trace()
 
     def test_inconsistence_data_init(self):
         learning_data = self.gen_data(1000, incons=True)
