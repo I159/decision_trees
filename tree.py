@@ -26,8 +26,20 @@ class Tree(object):
         self.keys = self.get_verified_keys(learning_data)
         self.learning_data = self.get_verified_data(learning_data)
         self.root_node = None
+        self.leafs = []
         self.learn()
         self.cleanup()
+
+    def divide_sequence(self, from_, to, delimeter, key):
+        left = collections.Counter(
+                i[key] for i in self.learning_data[from_: delimeter])
+        right = collections.Counter(
+                i[key] for i in self.learning_data[delimeter: to])
+
+        return self.parts(
+                max(left, key=lambda k: left[k]),
+                max(right, key=lambda k: right[k])
+                )
 
     def get_verified_data(self, data):
         if len(set(itertools.chain(*(i.itervalues() for i in data)))) != 2:
@@ -91,45 +103,31 @@ class Tree(object):
             return entp_dlm + (key, )
         return count
 
-    def divide_sequence(self, from_, to, delimeter, key):
-        left = collections.Counter(
-                i[key] for i in self.learning_data[from_: delimeter])
-        right = collections.Counter(
-                i[key] for i in self.learning_data[delimeter: to])
-
-        return self.parts(
-                max(left, key=lambda k: left[k]),
-                max(right, key=lambda k: right[k])
-                )
-
     def min_key_index(self, from_, to):
         keys_by_entp = map(self.min_entpy_idx(from_, to), self.keys)
-        index, key = min(keys_by_entp, key=self.min_entp_key)[1:]
-        self.keys.remove(key)
-        return index, key
+        return min(keys_by_entp, key=self.min_entp_key)
 
-    def learn(self, from_=None, to=None):
-        if not self.keys:
-            return None
+    def min_entropy_leaf(self, leaf):
+        from_, to = leaf['diapason']
+        return self.min_key_index(from_, to) + (leaf, )
 
-        from_ = from_ or 0
-        to = to or len(self.learning_data)
-        index, key = self.min_key_index(from_, to)
-
-        node = {
-                'key': key,
+    def learn(self):
+        leafs = []
+        from_ = 0
+        to = len(self.learning_data)
+        index, key = self.min_key_index(from_, to)[1:]
+        self.root_node = {
+                'diapason': (from_, to),
                 'target': self.learning_data[index][self.target]
                 }
-        if index - from_ > 4:
-            values = self.divide_sequence(from_, to, index, key)
-            node['left'] = values.left
-            node['right'] = values.right
-            node['left_child'] = self.learn(from_, index)
-            node['right_child'] = self.learn(index, to)
+        leafs.append(self.root_node)
 
-        if not self.root_node:
-            self.root_node = node
-        return node
+        while self.keys:
+            entropy, index, key, leaf = min(
+                    map(self.min_entropy_leaf, leafs, key=self.min_entp_key)
+                    )
+            leaf['key'] = key
+            leaf['left'] = {'diapason': ''}
 
     def make_decision(self, unclassified, node=None):
         node = node or self.root_node
