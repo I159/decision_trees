@@ -132,8 +132,9 @@ class Tree(object):
             leaf['left'] = {'diapason': (leaf['diapason'][0], index)}
             leaf['right'] = {'diapason': (index, leaf['diapason'][1])}
 
-            leafs.append(leaf['left'])
-            leafs.append(leaf['right'])
+            for branch in ('left', 'right'):
+                if leaf[branch]['diapason'][1] - leaf[branch]['diapason'][0] > 3:
+                    leafs.append(leaf[branch])
 
             leafs.remove(leaf)
             self.keys.remove(key)
