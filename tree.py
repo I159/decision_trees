@@ -26,7 +26,6 @@ class Tree(object):
         self.keys = self.get_verified_keys(learning_data)
         self.learning_data = self.get_verified_data(learning_data)
         self.root_node = None
-        self.leafs = []
         self.learn()
         self.cleanup()
 
@@ -51,7 +50,9 @@ class Tree(object):
         """Check for data consistency and return keys."""
         keys = set(tuple(i.keys()) for i in learning_data)
         if len(keys) == 1:
-            return list(keys.pop())
+            keys = list(keys.pop())
+            keys.remove(self.target)
+            return keys
         raise ValueError('Inconsistent data: the items have different keys.')
 
     def get_probability(self, key, from_=None, to=None):
@@ -108,20 +109,13 @@ class Tree(object):
         return min(keys_by_entp, key=self.min_entp_key)
 
     def min_entropy_leaf(self, leaf):
-        from_, to = leaf['diapason']
-        return self.min_key_index(from_, to) + (leaf, )
+        return self.min_key_index(leaf['from'], leaf['to']) + (leaf, )
 
     def learn(self):
         leafs = []
         from_ = 0
         to = len(self.learning_data)
-        data_target_value = collections.Counter(
-                i[self.target] for i in self.learning_data)
-        self.root_node = {
-                'diapason': (from_, to),
-                'target': max(data_target_value,
-                    key=lambda k: data_target_value[k])
-                }
+        self.root_node = {'from': from_, 'to': to}
         leafs.append(self.root_node)
 
         while self.keys:
@@ -129,15 +123,21 @@ class Tree(object):
                     map(self.min_entropy_leaf, leafs),
                     key=self.min_entp_key)[1:]
             leaf['key'] = key
-            leaf['left'] = {'diapason': (leaf['diapason'][0], index)}
-            leaf['right'] = {'diapason': (index, leaf['diapason'][1])}
+            leaf['left'] = {'from': leaf['from'], 'to': index}
+            leaf['right'] = {'from': index, 'to': leaf['to']}
 
             for branch in ('left', 'right'):
-                if leaf[branch]['diapason'][1] - leaf[branch]['diapason'][0] > 3:
+                if leaf[branch]['to'] - leaf[branch]['from'] > 3:
                     leafs.append(leaf[branch])
 
             leafs.remove(leaf)
             self.keys.remove(key)
+
+        for leaf in leafs:
+            leaf_data = self.learning_data[leaf['from']: leaf['to']]
+            target_value = collections.Counter(
+                i[self.target] for i in leaf_data)
+            leaf[self.target] = target_value
 
     def make_decision(self, unclassified, node=None):
         node = node or self.root_node
