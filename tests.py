@@ -25,16 +25,13 @@ class TestBuildTree(unittest.TestCase):
     def gen_inconsistence_data(self, num_items):
         return list(self.gen_data(num_items))[0].pop('a')
 
-    def test_init_tree(self):
+    def test_tree_health(self):
         self.assertIsNotNone(self.tree.root_node['left'])
         self.assertIsNotNone(self.tree.root_node['right'])
 
     def test_inconsistence_data_init(self):
         learning_data = self.gen_data(1000, incons=True)
         self.assertRaises(ValueError, tree.Tree, learning_data, 'p')
-
-    def test_minimum_enthropy(self):
-        unittest.skip("Not implemented.")
 
     def test_all_predicates_used(self):
         keys = []
@@ -48,10 +45,14 @@ class TestBuildTree(unittest.TestCase):
                     if j in i:
                         leafs.append(i[j])
                 leafs.remove(i)
-        print keys, self.keys
         self.assertEqual(sorted(keys), sorted(self.keys))
 
 
 class TestDecide(unittest.TestCase):
-    def test_is_correct_desision(self):
+    def test_correct_desision(self):
         unittest.skip("Not implemented.")
+
+
+class TestMethods(unittest.TestCase):
+    # TODO: test all the methods for correctness.
+    pass
