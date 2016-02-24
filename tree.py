@@ -115,19 +115,28 @@ class Tree(object):
         leafs = []
         from_ = 0
         to = len(self.learning_data)
-        index, key = self.min_key_index(from_, to)[1:]
+        data_target_value = collections.Counter(
+                i[self.target] for i in self.learning_data)
         self.root_node = {
                 'diapason': (from_, to),
-                'target': self.learning_data[index][self.target]
+                'target': max(data_target_value,
+                    key=lambda k: data_target_value[k])
                 }
         leafs.append(self.root_node)
 
         while self.keys:
-            entropy, index, key, leaf = min(
-                    map(self.min_entropy_leaf, leafs, key=self.min_entp_key)
-                    )
+            index, key, leaf = max(
+                    map(self.min_entropy_leaf, leafs),
+                    key=self.min_entp_key)[1:]
             leaf['key'] = key
-            leaf['left'] = {'diapason': ''}
+            leaf['left'] = {'diapason': (leaf['diapason'][0], index)}
+            leaf['right'] = {'diapason': (index, leaf['diapason'][1])}
+
+            leafs.append(leaf['left'])
+            leafs.append(leaf['right'])
+
+            leafs.remove(leaf)
+            self.keys.remove(key)
 
     def make_decision(self, unclassified, node=None):
         node = node or self.root_node
