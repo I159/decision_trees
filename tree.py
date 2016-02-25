@@ -111,12 +111,27 @@ class Tree(object):
     def min_entropy_leaf(self, leaf):
         return self.min_key_index(leaf['from'], leaf['to']) + (leaf, )
 
+    def get_feature_values(self, key, from_, to, index):
+        left = collections.Counter(
+                [i[key] for i in self.learning_data[from_: index]])
+        right = collections.Counter(
+                [i[key] for i in self.learning_data[index: to]])
+        left_val = max(left, key=lambda k: left[k])
+        right_val = max(right, key=lambda k: right[k])
+
+        if left_val == right_val:
+            left_prob = left[left_val] / float(left[0] + left[1])
+            right_prob = right[right_val] / float(right[0] + right[1])
+            if left_prob > right_prob:
+                right_val = abs(right_val - 1)
+            elif right_prob > left_prob:
+                left_val = abs(left_val - 1)
+
+        return left_val, right_val
+
     def learn(self):
-        leafs = []
-        from_ = 0
-        to = len(self.learning_data)
-        self.root_node = {'from': from_, 'to': to}
-        leafs.append(self.root_node)
+        self.root_node = {'from': 0, 'to': len(self.learning_data)}
+        leafs = [self.root_node]
 
         while self.keys:
             index, key, leaf = max(
@@ -125,6 +140,11 @@ class Tree(object):
             leaf['key'] = key
             leaf['left'] = {'from': leaf['from'], 'to': index}
             leaf['right'] = {'from': index, 'to': leaf['to']}
+            leaf['left_val'], leaf['right_val'] = self.get_feature_values(
+                key, leaf['from'], leaf['to'], index)
+
+            del leaf['left']
+            del leaf['right']
 
             for branch in ('left', 'right'):
                 if leaf[branch]['to'] - leaf[branch]['from'] > 3:
