@@ -26,6 +26,8 @@ class Tree(object):
         self.keys = self.get_verified_keys(learning_data)
         self.learning_data = self.get_verified_data(learning_data)
         self.root_node = None
+        self.min_entp_key = lambda x: x[0]
+
         self.learn()
         self.cleanup()
 
@@ -56,17 +58,12 @@ class Tree(object):
             yield len(by_key) / float(len(the_slice))
 
     def count_entropy(self, key, from_, to):
-        """Count entropy for a key on a slice."""
+        """Count Shannon entropy for a key on a slice."""
         probs = list(self.get_probability(key, from_, to))
         try:
             return sum(map(lambda p: -(p * math.log(p, 2)), probs))
         except ValueError:
             return None
-
-    @staticmethod
-    def min_entp_key(x):
-        """Common filtering key."""
-        return x[0]
 
     def average_entropy(self, key, from_, to):
         """Average entropy for on a slice for a key."""
@@ -146,8 +143,8 @@ class Tree(object):
 
             leafs.remove(leaf)
             self.keys.remove(key)
-            del leaf['left']
-            del leaf['right']
+            del leaf['from']
+            del leaf['to']
 
         for leaf in leafs:
             leaf_data = self.learning_data[leaf['from']: leaf['to']]
@@ -158,14 +155,11 @@ class Tree(object):
     def make_decision(self, unclassified, node=None):
         """Decision process itself."""
         node = node or self.root_node
-        try:
-            if unclassified[node['key']] == node['left']:
-                return self.make_decision(unclassified, node['left_child'])
-            elif unclassified[node['key']] == node['right']:
-                return self.make_decision(unclassified, node['right'])
-            raise ValueError('Invalid predicate value.')
-        except KeyError:
-            return node[self.target]
+        if unclassified[node['key']] == node['left_val']:
+            return self.make_decision(unclassified, node['left'])
+        elif unclassified[node['key']] == node['right_val']:
+            return self.make_decision(unclassified, node['right'])
+        raise ValueError('Invalid predicate value.')
 
     def cleanup(self):
         """Cleanup memory."""
