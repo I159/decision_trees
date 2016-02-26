@@ -6,7 +6,7 @@ import unittest
 import tree
 
 
-class TestBuildTree(unittest.TestCase):
+class BaseTestCase(unittest.TestCase):
     def setUp(self):
         self.keys = [string.ascii_lowercase[i] for i in xrange(2**4)]
         learning_data = list(self.gen_data(1000))
@@ -22,6 +22,8 @@ class TestBuildTree(unittest.TestCase):
             num_items -= 1
             yield item
 
+
+class TestBuildTree(BaseTestCase):
     def gen_inconsistence_data(self, num_items):
         return list(self.gen_data(num_items))[0].pop('a')
 
@@ -48,9 +50,17 @@ class TestBuildTree(unittest.TestCase):
         self.assertEqual(sorted(keys), sorted(self.keys))
 
 
-class TestDecide(unittest.TestCase):
+class TestDecide(BaseTestCase):
+    def setUp(self):
+        super(TestDecide, self).setUp()
+        self.test_data = list(self.gen_data(100))
+
     def test_correct_desision(self):
-        unittest.skip("Not implemented.")
+        predictions = map(self.tree.make_decision, self.test_data)
+        results = [i['result'] for i in self.test_data]
+        # Random generated data doesn't guarantee a good prediction. Use assert
+        # for a real data.
+        print len([i for i in zip(predictions, results) if i[0] == i[1]])
 
 
 class TestMethods(unittest.TestCase):

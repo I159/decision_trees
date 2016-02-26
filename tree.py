@@ -128,9 +128,10 @@ class Tree(object):
         leafs = [self.root_node]
 
         while self.keys:
-            index, key, leaf = max(
-                    map(self.min_entropy_leaf, leafs),
-                    key=self.min_entp_key)[1:]
+            #split = filter(lambda leaf: leaf['to'] - leaf['from'] > 3, leafs)
+            min_entp_leaf = map(self.min_entropy_leaf, leafs)
+            index, key, leaf = min(min_entp_leaf, key=self.min_entp_key)[1:]
+
             leaf['key'] = key
             leaf['left'] = {'from': leaf['from'], 'to': index}
             leaf['right'] = {'from': index, 'to': leaf['to']}
@@ -138,7 +139,8 @@ class Tree(object):
                 key, leaf['from'], leaf['to'], index)
 
             for branch in ('left', 'right'):
-                if leaf[branch]['to'] - leaf[branch]['from'] > 3:
+                # TODO: Single value leaf case.
+                if leaf[branch]['to'] - leaf[branch]['from'] > 3 or len(set(i[leaf['key']] for i in self.learning_data[leaf['from']: leaf['to']])):
                     leafs.append(leaf[branch])
 
             leafs.remove(leaf)
@@ -150,15 +152,18 @@ class Tree(object):
             leaf_data = self.learning_data[leaf['from']: leaf['to']]
             target_value = collections.Counter(
                 i[self.target] for i in leaf_data)
-            leaf[self.target] = target_value
+            leaf[self.target] = target_value.keys()[0]
 
     def make_decision(self, unclassified, node=None):
         """Decision process itself."""
         node = node or self.root_node
-        if unclassified[node['key']] == node['left_val']:
-            return self.make_decision(unclassified, node['left'])
-        elif unclassified[node['key']] == node['right_val']:
-            return self.make_decision(unclassified, node['right'])
+        try:
+            if unclassified[node['key']] == node['left_val']:
+                return self.make_decision(unclassified, node['left'])
+            elif unclassified[node['key']] == node['right_val']:
+                return self.make_decision(unclassified, node['right'])
+        except KeyError:
+            return node[self.target]
         raise ValueError('Invalid predicate value.')
 
     def cleanup(self):
