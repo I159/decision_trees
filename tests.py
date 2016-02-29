@@ -46,6 +46,7 @@ class TestDecide(BaseTestCase):
         print len([i for i in zip(predictions, results) if i[0] == i[1]])
 
     def test_inconsistence_data_prediction(self):
+        # TODO: determine an error case.
         inconst_test = self.gen_data(100, True)
         predictions = map(self.tree.make_decision, inconst_test)
         results = [i['result'] for i in self.test_data]
