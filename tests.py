@@ -24,9 +24,6 @@ class BaseTestCase(unittest.TestCase):
 
 
 class TestBuildTree(BaseTestCase):
-    def gen_inconsistence_data(self, num_items):
-        return list(self.gen_data(num_items))[0].pop('a')
-
     def test_tree_health(self):
         self.assertIsNotNone(self.tree.root_node['left'])
         self.assertIsNotNone(self.tree.root_node['right'])
@@ -34,20 +31,6 @@ class TestBuildTree(BaseTestCase):
     def test_inconsistence_data_init(self):
         learning_data = self.gen_data(1000, incons=True)
         self.assertRaises(ValueError, tree.Tree, learning_data, 'p')
-
-    def test_all_predicates_used(self):
-        keys = []
-        leafs = []
-        leafs.append(self.tree.root_node)
-        while leafs:
-            for i in leafs:
-                if 'key' in i:
-                    keys.append(i['key'])
-                for j in ('left', 'right'):
-                    if j in i:
-                        leafs.append(i[j])
-                leafs.remove(i)
-        self.assertEqual(sorted(keys), sorted(self.keys))
 
 
 class TestDecide(BaseTestCase):
@@ -61,6 +44,11 @@ class TestDecide(BaseTestCase):
         # Random generated data doesn't guarantee a good prediction. Use assert
         # for a real data.
         print len([i for i in zip(predictions, results) if i[0] == i[1]])
+
+    def test_inconsistence_data_prediction(self):
+        inconst_test = self.gen_data(100, True)
+        predictions = map(self.tree.make_decision, inconst_test)
+        results = [i['result'] for i in self.test_data]
 
 
 class TestMethods(unittest.TestCase):

@@ -122,31 +122,37 @@ class Tree(object):
 
         return left_val, right_val
 
+    @staticmethod
+    def to_split(leaf):
+        return leaf['to'] - leaf['from'] > 3 and not 'leaf' in leaf
+
     def learn(self):
         """Learn process itself."""
         self.root_node = {'from': 0, 'to': len(self.learning_data)}
         leafs = [self.root_node]
 
         while self.keys:
-            #split = filter(lambda leaf: leaf['to'] - leaf['from'] > 3, leafs)
-            min_entp_leaf = map(self.min_entropy_leaf, leafs)
-            index, key, leaf = min(min_entp_leaf, key=self.min_entp_key)[1:]
+            min_entp_leaf = map(self.min_entropy_leaf,
+                    filter(self.to_split, leafs))
+            entropy, index, key, leaf = min(
+                    min_entp_leaf, key=self.min_entp_key)
+            self.keys.remove(key)
 
-            leaf['key'] = key
-            leaf['left'] = {'from': leaf['from'], 'to': index}
-            leaf['right'] = {'from': index, 'to': leaf['to']}
-            leaf['left_val'], leaf['right_val'] = self.get_feature_values(
-                key, leaf['from'], leaf['to'], index)
+            if entropy == 0:
+                leaf['leaf'] = True
+            else:
+                leaf['key'] = key
+                leaf['left'] = {'from': leaf['from'], 'to': index}
+                leaf['right'] = {'from': index, 'to': leaf['to']}
+                leaf['left_val'], leaf['right_val'] = self.get_feature_values(
+                    key, leaf['from'], leaf['to'], index)
 
-            for branch in ('left', 'right'):
-                # TODO: Single value leaf case.
-                if leaf[branch]['to'] - leaf[branch]['from'] > 3 or len(set(i[leaf['key']] for i in self.learning_data[leaf['from']: leaf['to']])):
+                for branch in ('left', 'right'):
                     leafs.append(leaf[branch])
 
-            leafs.remove(leaf)
-            self.keys.remove(key)
-            del leaf['from']
-            del leaf['to']
+                leafs.remove(leaf)
+                del leaf['from']
+                del leaf['to']
 
         for leaf in leafs:
             leaf_data = self.learning_data[leaf['from']: leaf['to']]
