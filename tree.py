@@ -3,11 +3,41 @@
 All the features including a target feature is binary."""
 
 import collections
+import functools
 import itertools
 import math
 
 
 class Tree(object):
+    """Just a tree to make decisions."""
+    def __init__(self, node, target):
+        self.root_node = node
+        self.target = target
+
+    def make_decision(self, unclassified, node=None):
+        """Decision process itself."""
+        node = node or self.root_node
+        try:
+            if unclassified[node['key']] == node['left_val']:
+                return self.make_decision(unclassified, node['left'])
+            elif unclassified[node['key']] == node['right_val']:
+                return self.make_decision(unclassified, node['right'])
+        except KeyError:
+            return node[self.target]
+        raise ValueError('Invalid predicate value.')
+
+
+def function_behaviour(class_):
+    """Make a callable class behave as factory function"""
+    @functools.wraps
+    def wrap(learning_data, target):
+        ct = class_(learning_data, target)
+        return ct()
+    return wrap
+
+
+@function_behaviour
+class create_tree(object):
     """Decision tree controller object.
 
     Control nodes. Maintain learning process and making decisions process."""
@@ -28,8 +58,9 @@ class Tree(object):
         self.root_node = None
         self.min_entp_key = lambda x: x[0]
 
+    def __call__(self):
         self.learn()
-        self.cleanup()
+        return Tree(self.root_node, self.target)
 
     def get_verified_data(self, data):
         """Check is data consistent."""
@@ -159,20 +190,3 @@ class Tree(object):
             target_value = collections.Counter(
                 i[self.target] for i in leaf_data)
             leaf[self.target] = target_value.keys()[0]
-
-    def make_decision(self, unclassified, node=None):
-        """Decision process itself."""
-        node = node or self.root_node
-        try:
-            if unclassified[node['key']] == node['left_val']:
-                return self.make_decision(unclassified, node['left'])
-            elif unclassified[node['key']] == node['right_val']:
-                return self.make_decision(unclassified, node['right'])
-        except KeyError:
-            return node[self.target]
-        raise ValueError('Invalid predicate value.')
-
-    def cleanup(self):
-        """Cleanup memory."""
-        delattr(self, 'keys')
-        delattr(self, 'learning_data')
