@@ -54,5 +54,33 @@ class TestDecide(BaseTestCase):
 
 
 class TestMethods(unittest.TestCase):
-    # TODO: test all the methods for correctness.
-    pass
+    def test_verify_data(self):
+        unittest.skip("Not implemented")
+
+    def test_verify_keys(self):
+        unittest.skip("Not implemented")
+
+    def test_probability(self):
+        unittest.skip("Not implemented")
+
+    def test_entropy(self):
+        unittest.skip("Not implemented")
+
+    def test_average_entropy(self):
+        unittest.skip("Not implemented")
+
+    def test_index(self):
+        unittest.skip("Not implemented")
+
+    def test_key(self):
+        unittest.skip("Not implemented")
+
+    def test_leaf(self):
+        unittest.skip("Not implemented")
+
+    def test_feature(self):
+        unittest.skip("Not implemented")
+
+    def test_learn(self):
+        unittest.skip("Not implemented")
+
