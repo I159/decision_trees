@@ -29,11 +29,10 @@ class Tree(object):
 
 def function_behaviour(class_):
     """Make a callable class behave as factory function"""
-    @functools.wraps
-    def wrap(learning_data, target):
+    def create_tree(learning_data, target):
         ct = class_(learning_data, target)
         return ct()
-    return wrap
+    return create_tree
 
 
 @function_behaviour
@@ -53,23 +52,23 @@ class create_tree(object):
         target."""
 
         self.target = target
-        self.keys = self.get_verified_keys(learning_data)
-        self.learning_data = self.get_verified_data(learning_data)
+        self.keys = self._get_verified_keys(learning_data)
+        self.learning_data = self._get_verified_data(learning_data)
         self.root_node = None
-        self.min_entp_key = lambda x: x[0]
+        self._by_entropy = lambda x: x[0]
 
     def __call__(self):
         self.learn()
         return Tree(self.root_node, self.target)
 
-    def get_verified_data(self, data):
+    def _get_verified_data(self, data):
         """Check is data consistent."""
         if len(set(itertools.chain(*(i.itervalues() for i in data)))) != 2:
             raise ValueError(
                     'Inconsistent data: data is not binary.')
         return sorted(data, key=lambda x: x[self.target])
 
-    def get_verified_keys(self, learning_data):
+    def _get_verified_keys(self, learning_data):
         """Check for data consistency and return keys."""
         keys = set(tuple(i.keys()) for i in learning_data)
         if len(keys) == 1:
@@ -78,7 +77,7 @@ class create_tree(object):
             return keys
         raise ValueError('Inconsistent data: the items have different keys.')
 
-    def get_probability(self, key, from_=None, to=None):
+    def _get_probability(self, key, from_=None, to=None):
         """Get probability for a different values of a key on a slice."""
         if from_ or to:
             the_slice = self.learning_data[from_:to]
@@ -88,20 +87,20 @@ class create_tree(object):
             by_key = filter(lambda x: x[key] == i, the_slice)
             yield len(by_key) / float(len(the_slice))
 
-    def count_entropy(self, key, from_, to):
+    def _count_entropy(self, key, from_, to):
         """Count Shannon entropy for a key on a slice."""
-        probs = list(self.get_probability(key, from_, to))
+        probs = list(self._get_probability(key, from_, to))
         try:
             return sum(map(lambda p: -(p * math.log(p, 2)), probs))
         except ValueError:
             return None
 
-    def average_entropy(self, key, from_, to):
+    def _average_entropy(self, key, from_, to):
         """Average entropy for on a slice for a key."""
         def count(delimeter):
             entropy = filter(None,
-                    (self.count_entropy(key, from_, delimeter),
-                     self.count_entropy(key, delimeter, to))
+                    (self._count_entropy(key, from_, delimeter),
+                     self._count_entropy(key, delimeter, to))
                     )
             if len(entropy) == 1:
                 return entropy[0], delimeter
@@ -111,7 +110,7 @@ class create_tree(object):
                 return sum(entropy) / 2.0, delimeter
         return count
 
-    def min_entpy_idx(self, from_, to):
+    def _min_index(self, from_, to):
         """Count average entropy for all allowed slices.
 
         Returns a minimum average entropy index and a prevailing
@@ -119,22 +118,22 @@ class create_tree(object):
 
         def count(key):
             ave_entropy = map(
-                    self.average_entropy(key, from_, to),
+                    self._average_entropy(key, from_, to),
                     xrange(from_+1, to-1))
-            entp_dlm = min(ave_entropy, key=self.min_entp_key)
+            entp_dlm = min(ave_entropy, key=self._by_entropy)
             return entp_dlm + (key, )
         return count
 
-    def min_key_index(self, from_, to):
+    def _min_key(self, from_, to):
         """Key with a minimal entropy for a slice."""
-        keys_by_entp = map(self.min_entpy_idx(from_, to), self.keys)
-        return min(keys_by_entp, key=self.min_entp_key)
+        keys_by_entp = map(self._min_index(from_, to), self.keys)
+        return min(keys_by_entp, key=self._by_entropy)
 
-    def min_entropy_leaf(self, leaf):
+    def _min_leaf(self, leaf):
         """leaf node with a minimal entropy."""
-        return self.min_key_index(leaf['from'], leaf['to']) + (leaf, )
+        return self._min_key(leaf['from'], leaf['to']) + (leaf, )
 
-    def get_feature_values(self, key, from_, to, index):
+    def _get_feature_values(self, key, from_, to, index):
         """The most probable value for a key on a node."""
         left = collections.Counter(
                 [i[key] for i in self.learning_data[from_: index]])
@@ -154,7 +153,8 @@ class create_tree(object):
         return left_val, right_val
 
     @staticmethod
-    def to_split(leaf):
+    def _if_splitable(leaf):
+        """Filter to determine a leafs able for further split."""
         return leaf['to'] - leaf['from'] > 3 and not 'leaf' in leaf
 
     def learn(self):
@@ -163,10 +163,8 @@ class create_tree(object):
         leafs = [self.root_node]
 
         while self.keys:
-            min_entp_leaf = map(self.min_entropy_leaf,
-                    filter(self.to_split, leafs))
-            entropy, index, key, leaf = min(
-                    min_entp_leaf, key=self.min_entp_key)
+            splitable = map(self._min_leaf, filter(self._if_splitable, leafs))
+            entropy, index, key, leaf = min(splitable, key=self._by_entropy)
             self.keys.remove(key)
 
             if entropy == 0:
@@ -175,7 +173,7 @@ class create_tree(object):
                 leaf['key'] = key
                 leaf['left'] = {'from': leaf['from'], 'to': index}
                 leaf['right'] = {'from': index, 'to': leaf['to']}
-                leaf['left_val'], leaf['right_val'] = self.get_feature_values(
+                leaf['left_val'], leaf['right_val'] = self._get_feature_values(
                     key, leaf['from'], leaf['to'], index)
 
                 for branch in ('left', 'right'):

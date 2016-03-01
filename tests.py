@@ -10,7 +10,7 @@ class BaseTestCase(unittest.TestCase):
     def setUp(self):
         self.keys = [string.ascii_lowercase[i] for i in xrange(2**4)]
         learning_data = list(self.gen_data(1000))
-        self.tree = tree.Tree(learning_data, 'result')
+        self.tree = tree.create_tree(learning_data, 'result')
 
     def gen_data(self, num_items, incons=False):
         while num_items:
@@ -30,7 +30,8 @@ class TestBuildTree(BaseTestCase):
 
     def test_inconsistence_data_init(self):
         learning_data = self.gen_data(1000, incons=True)
-        self.assertRaises(ValueError, tree.Tree, learning_data, 'p')
+        self.assertRaises(ValueError,
+                tree.create_tree, learning_data, 'result')
 
 
 class TestDecide(BaseTestCase):
