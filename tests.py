@@ -53,7 +53,7 @@ class TestDecide(BaseTestCase):
         results = [i['result'] for i in self.test_data]
 
 
-class TestMethods(unittest.TestCase):
+class TestCreationMethods(BaseTestCase):
     def test_verify_data(self):
         unittest.skip("Not implemented")
 
@@ -84,3 +84,7 @@ class TestMethods(unittest.TestCase):
     def test_learn(self):
         unittest.skip("Not implemented")
 
+
+class TestDecisionMethod(BaseTestCase):
+    def test_make_decision(self):
+        unittest.skip("Not implemented error.")
