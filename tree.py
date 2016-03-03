@@ -32,6 +32,7 @@ def function_behaviour(class_):
     def create_tree(learning_data, target):
         ct = class_(learning_data, target)
         return ct()
+    create_tree.__decorated__ = class_ # Keep a class for more transparent view
     return create_tree
 
 
@@ -40,8 +41,6 @@ class create_tree(object):
     """Decision tree controller object.
 
     Control nodes. Maintain learning process and making decisions process."""
-
-    parts = collections.namedtuple('DataParts', ('left', 'right'))
 
     def __init__(self, learning_data, target):
         """Sort a training data relatively to a target feature.
@@ -58,11 +57,12 @@ class create_tree(object):
         self._by_entropy = lambda x: x[0]
 
     def __call__(self):
-        self.learn()
+        self._learn()
         return Tree(self.root_node, self.target)
 
     def _get_verified_data(self, data):
         """Check is data consistent."""
+        import pdb; pdb.set_trace()
         if len(set(itertools.chain(*(i.itervalues() for i in data)))) != 2:
             raise ValueError(
                     'Inconsistent data: data is not binary.')
@@ -157,7 +157,7 @@ class create_tree(object):
         """Filter to determine a leafs able for further split."""
         return leaf['to'] - leaf['from'] > 3 and not 'leaf' in leaf
 
-    def learn(self):
+    def _learn(self):
         """Learn process itself."""
         self.root_node = {'from': 0, 'to': len(self.learning_data)}
         leafs = [self.root_node]
