@@ -62,7 +62,6 @@ class create_tree(object):
 
     def _get_verified_data(self, data):
         """Check is data consistent."""
-        import pdb; pdb.set_trace()
         if len(set(itertools.chain(*(i.itervalues() for i in data)))) != 2:
             raise ValueError(
                     'Inconsistent data: data is not binary.')
@@ -79,7 +78,7 @@ class create_tree(object):
 
     def _get_probability(self, key, from_=None, to=None):
         """Get probability for a different values of a key on a slice."""
-        if from_ or to:
+        if from_ is not None or to is not None:
             the_slice = self.learning_data[from_:to]
         else:
             the_slice = self.learning_data
