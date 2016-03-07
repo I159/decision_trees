@@ -111,16 +111,16 @@ class TestCreationMethods(unittest.TestCase):
     def test_key(self):
         self.assertEqual(self.ct._min_key(0, self.to)[2], 'b')
 
-    def test_leaf(self):
-        unittest.skip("Not implemented")
-
     def test_feature(self):
-        unittest.skip("Not implemented")
-
-    def test_learn(self):
-        unittest.skip("Not implemented")
+        self.assertEqual(
+                self.ct._get_feature_values('b', 0, self.to, 3),
+                (0, 1))
 
 
 class TestDecisionMethod(BaseTestCase):
     def test_make_decision(self):
-        unittest.skip("Not implemented error.")
+        unclasified = self.gen_data(100)
+        res = map(self.tree.make_decision, unclasified)
+        self.assertEqual(len(set(res)), 2) # Since there is no real data we
+        # can't check result for correctness. All possible is to ensure
+        # that we have different decisions.
