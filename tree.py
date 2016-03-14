@@ -82,9 +82,28 @@ class create_tree(object):
             the_slice = self.learning_data[from_:to]
         else:
             the_slice = self.learning_data
-        for i in (0, 1):
-            by_key = filter(lambda x: x[key] == i, the_slice)
-            yield len(by_key) / float(len(the_slice))
+
+        the_slice = [i[key] for i in the_slice]
+        the_slice.sort()
+
+        slice_values = set(the_slice)
+
+        if len(slice_values) == 1:
+            for i in (0, 1):
+                yield int(i == next(iter(slice_values)))
+        else:
+            from_ = 0
+            to = len(the_slice)
+            d = to / 2
+            while the_slice[d] == 1 and the_slice[d-1] == 0:
+                d = (to - from_) / 2
+                if the_slice[d] == 1:
+                    to = d
+                elif the_slice[d] == 0:
+                    from_ = d
+
+            for i in (len(the_slice[:d]), len(the_slice[d:])):
+                yield i / len(the_slice)
 
     def _count_entropy(self, key, from_, to):
         """Count Shannon entropy for a key on a slice."""

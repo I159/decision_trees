@@ -1,9 +1,10 @@
+import cProfile
 import mock
 import random
 import string
 import unittest
 
-import tree
+import id3.tree as tree
 
 
 class BaseTestCase(unittest.TestCase):
@@ -12,7 +13,6 @@ class BaseTestCase(unittest.TestCase):
         self.target = 'result'
         self.learning_data = list(self.gen_data(1000))
         self.inconsistance_data = list(self.gen_data(1000, True))
-        self.tree = tree.create_tree(self.learning_data, self.target)
 
     def gen_data(self, num_items, incons=False):
         while num_items:
@@ -25,17 +25,23 @@ class BaseTestCase(unittest.TestCase):
             yield item
 
 
-class TestBuildTree(BaseTestCase):
+class PreBuildTree(BaseTestCase):
+    def setUp(self):
+        super(PreBuildTree, self).setUp()
+        self.tree = tree.create_tree(self.learning_data, self.target)
+
+
+class TestBuildTree(PreBuildTree):
     def test_tree_health(self):
         self.assertIsNotNone(self.tree.root_node['left'])
         self.assertIsNotNone(self.tree.root_node['right'])
 
     def test_inconsistence_data_init(self):
         self.assertRaises(ValueError,
-                tree.create_tree, inconsistence_data, self.target)
+                tree.create_tree, self.inconsistence_data, self.target)
 
 
-class TestDecide(BaseTestCase):
+class TestDecide(PreBuildTree):
     def setUp(self):
         super(TestDecide, self).setUp()
         self.test_data = list(self.gen_data(100))
@@ -117,10 +123,17 @@ class TestCreationMethods(unittest.TestCase):
                 (0, 1))
 
 
-class TestDecisionMethod(BaseTestCase):
+class TestDecisionMethod(PreBuildTree):
     def test_make_decision(self):
         unclasified = self.gen_data(100)
         res = map(self.tree.make_decision, unclasified)
         self.assertEqual(len(set(res)), 2) # Since there is no real data we
         # can't check result for correctness. All possible is to ensure
         # that we have different decisions.
+
+
+class TestProfile(BaseTestCase):
+    def test_pof_init(self):
+        cProfile.runctx(
+                "tree.create_tree(self.learning_data, self.target)",
+                globals(), locals())
