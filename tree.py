@@ -92,20 +92,19 @@ class create_tree(object):
             for i in (0, 1):
                 yield int(i == next(iter(slice_values)))
         else:
-            f = 0
-            t = len_slice
-            d = to / 2
-            while not (the_slice[d] == 1 and the_slice[d-1] == 0):
-                if the_slice[d] == 1:
-                    t = d
-                    d -= (d-from_)/2
-                    print f, d, t
-                elif the_slice[d] == 0:
-                    f = d
-                    d += (to - d)/2
-                    print f, d, t
+            _from = 0
+            t0 = len_slice
+            delim = t0 / 2
+            while not (the_slice[delim] == 1 and the_slice[delim-1] == 0):
+                if the_slice[delim] == 1:
+                    t0 = delim
+                    delim -= (t0 - _from)/2
+                elif the_slice[delim] == 0:
+                    _from = delim
+                    delim += (t0 - _from)/2
 
-            for i in (d, len_slice - d):
+            len_slice = float(len_slice)
+            for i in (delim, len_slice - delim):
                 yield i / len_slice
 
     def _count_entropy(self, key, from_, to):
