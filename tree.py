@@ -40,7 +40,7 @@ def function_behaviour(class_):
 
 
 @function_behaviour
-class create_tree(object):
+class CreateTree(object):
     """Decision tree controller object.
 
     Control nodes. Maintain learning process and making decisions process."""
