@@ -10,8 +10,9 @@ import math
 
 class Tree(object):
     """Just a tree to make decisions.
-    
+
     Let's change the same line!"""
+    """
 
     def __init__(self, node, target):
         self.root_node = node
