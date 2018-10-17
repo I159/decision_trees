@@ -45,6 +45,8 @@ def function_behaviour(class_):
 class CreateTree(object):
     """Decision tree controller object.
 
+    Different line change
+
     Control nodes. Maintain learning process and making decisions process."""
 
     def __init__(self, learning_data, target):
